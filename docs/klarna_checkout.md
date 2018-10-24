@@ -1,8 +1,391 @@
 # KLARNA CHECKOUT PROCESS
 
 > KLARNA CHECKOUT lets you:
- - Offer a checkout experience where Klarna collects your consumer's billing and shipping address details, handles the major popular payment methods, and fraud management on your behalf in one integration
+ - Offer a checkout experience where Klarna collects your consumer's billing and shipping address details, handles popular payment methods, and fraud management on your behalf in one integration
  - Integrate this using JSON REST API and JavaScript, or other SDKs
  - Apply your visual guidelines to get a branded experience
 
  ---
+
+?> Klarna Checkout consists of 2 parts:
+
+ ## Checkout Page Snippet - Create the order
+### Render the checkout page
+- Call Klarna's server with your customer ```cart details```, ```locale```, ```merchant ID``` and a few more details.
+- Response is a HTML snippet - this needs to be embedded in your checkout page.
+
+!> Add image of checkout??
+
+--- 
+
+### Render the confirmation page
+After the customer completed the purchase in checkout snippet:
+- Call Klarna to get confirmation page HTML snippet
+- If request is successful, Klarna returns HTML snippet with order confirmation details you need to embed in confirmation page.
+
+> ***__Needed from the merchant:__***
+- **Checkout** and **Confirmation** page each containing div that will contain HTML snippets received from Klarna
+- **Push URL**, where Klarna informs merchant of order status. **_Push URL_** should contain ```order_id``` placeholder that Klarna will fill in
+- **Terms and Conditions URL**. Klarna will provide customer with link to your terms and conditions in certain phases of the order
+- Review security of merchant site
+
+### Overview of Checkout Process and Client to Server Communication
+<p align="center">
+  <img  width=500 height=500 src="https://res.cloudinary.com/n8dawg/image/upload/v1531058456/s2s.png">
+</p>
+
+
+## Embed the Checkout Snippet
+This part starts after the customer has selcted their product(s) on your site and wants to proceed to checkout.
+
+?> Klarna uses HTTP Basic Auth for authentication. Use API credentials provided <br>
+```username``` linked to Merchant ID at Klarna and <br>
+```password``` <br>
+```Authentication: Base64(username:password)```
+
+!> Klarna's EU and US environments have different endpoints for testing and live purchases. All requests go through HTTPS. [Klarna's API endpoints](/https://developers.klarna.com/api/#api-urls)
+
+---
+
+### Create a Checkout Order
+#### 1. Configure the Checkout Order
+> Items you should configure for the checkout:
+- Merchant ID and [API Credentials](/https://developers.klarna.com/en/gb/kco-v3/test-credentials) provided by Klarna
+- Currency, language (locale), and country to be used (to match the customer experience you want to render)
+- Endpoints to be used by Klarna Checkout:
+  - Terms & conditions URL [**__mandatory__**]
+  - Checkout URL to your checkout page [**__mandatory__**]
+  - Confirmation URL [**__mandatory__**]
+  - Push URL to which Klarna will send an HTTP post request to confirm order [**__mandatory__**]
+  - Order validation, Tax & Shipping changes and other notifications
+
+#### 2. Create a Checkout Order
+Create a Checkout Order request
+```JSON 
+POST /checkout/v3/orders
+Authorization: Basic pwhcueUff0MmwLShJiBE9JHA==
+Content-Type: application/json
+{
+ "purchase_country": "se",
+ "purchase_currency": "sek",
+ "locale": "en-GB",
+ "billing_address": {
+   "given_name": "Testperson-se",
+   "family_name": "Approved",
+   "email": "youremail@email.com",
+   "street_address": "Stårgatan 1",
+   "postal_code": "12345",
+   "city": "Ankeborg",
+   "phone": "+46765260000",
+   "country": "se"
+ },
+ "order_amount": 503341,
+ "order_tax_amount": 100668,
+ "order_lines": [
+   {
+     "type": "physical",
+     "reference": "19-402-SWE",
+     "name": "Camera Travel Set",
+     "quantity": 1,
+     "quantity_unit": "pcs",
+     "unit_price": 603341,
+     "tax_rate": 2500,
+     "total_amount": 503341,
+     "total_discount_amount": 100000,
+     "total_tax_amount": 100668,
+     "image_url": "http://merchant.com/logo.png"
+   }
+ ],
+ "merchant_urls": {
+   "terms": "http://merchant.com/tac.php",
+   "checkout": "http://merchant.com/checkout.php?sid={checkout.order.id}",
+   "confirmation": "http://merchant.com/thankyou.php?sid={checkout.order.id}",
+   "push": "http://localhost/kco/push.php?checkout_uri={checkout.order.id}"
+ },
+ "shipping_options": [
+   {
+     "id": "free_shipping",
+     "name": "Free Shipping",
+     "description": "Delivers in 5-7 days",
+     "price": 0,
+     "tax_amount": 0,
+     "tax_rate": 0,
+     "preselected": true,
+     "shipping_method": "Home"
+   },
+   {
+     "id": "pick_up_store",
+     "name": "Pick up at closest store",
+     "price": 399,
+     "tax_amount": 0,
+     "tax_rate": 0,
+     "preselected": false,
+     "shipping_method": "PickUpStore"
+   }
+ ]
+}
+
+```
+
+?> The JSON response from the create checkout order call contains a unique ```order_id``` generated by Klarna. The JSON payload also contains the HTML snippet you need to include on your page to render the checkout.
+
+```JSON
+{
+ "order_id": "1203c28c-f101-765f-bed8-f57a2d5e83e0",
+ "status": "checkout_incomplete",
+ "purchase_country": "se",
+ "purchase_currency": "sek",
+ "locale": "en-GB",
+ "billing_address": {
+   "given_name": "Testperson-se",
+   "family_name": "Approved",
+   "email": "youremail@email.com",
+   "street_address": "Stårgatan 1",
+   "postal_code": "12345",
+   "city": "Ankeborg",
+   "phone": "+46765260000",
+   "country": "se"
+ },
+ "customer": {},
+ "shipping_address": {
+   "given_name": "Testperson-se",
+   "family_name": "Approved",
+   "email": "youremail@email.com",
+   "street_address": "Stårgatan 1",
+   "postal_code": "12345",
+   "city": "Ankeborg",
+   "phone": "+46765260000",
+   "country": "se"
+ },
+ "order_amount": 503341,
+ "order_tax_amount": 100668,
+ "order_lines": [
+   {
+     "type": "physical",
+     "reference": "19-402-SWE",
+     "name": "Camera Travel Set",
+     "quantity": 1,
+     "quantity_unit": "pcs",
+     "unit_price": 603341,
+     "tax_rate": 2500,
+     "total_amount": 503341,
+     "total_discount_amount": 100000,
+     "total_tax_amount": 100668,
+     "image_url": "http://merchant.com/logo.png"
+   }
+ ],
+ "merchant_urls": {
+   "terms": "http://merchant.com/tac.php",
+   "checkout": "http://merchant.com/checkout.php?sid={checkout.order.id}",
+   "confirmation": "http://merchant.com/thankyou.php?sid={checkout.order.id}",
+   "push": "http://localhost/kco/push.php?checkout_uri={checkout.order.id}"
+ },
+ "html_snippet": "<div id=\"klarna-checkout-container\".................",
+ "started_at": "2018-01-24T14:21:55Z",
+ "last_modified_at": "2018-01-24T14:21:55Z",
+ "options": {
+   "allow_separate_shipping_address": false,
+   "date_of_birth_mandatory": false,
+   "require_validate_callback_success": false
+ },
+ "external_payment_methods": [],
+ "external_checkouts": [],
+ "shipping_options": [
+   {
+     "id": "free_shipping",
+     "name": "Free Shipping",
+     "description": "Delivers in 5-7 days",
+     "price": 0,
+     "tax_amount": 0,
+     "tax_rate": 0,
+     "preselected": true,
+     "shipping_method": "Home"
+   },
+   {
+     "id": "pick_up_store",
+     "name": "Pick up at closest store",
+     "price": 399,
+     "tax_amount": 0,
+     "tax_rate": 0,
+     "preselected": false,
+     "shipping_method": "PickUpStore"
+   }
+ ],
+ "selected_shipping_option": {
+   "id": "free_shipping",
+   "name": "Free Shipping",
+   "description": "Delivers in 5-7 days",
+   "price": 0,
+   "tax_amount": 0,
+   "tax_rate": 0,
+   "preselected": true,
+   "shipping_method": "Home"
+ }
+}
+ ```
+
+ #### 3. Render the Snippet in Your Checkout Page
+ Get the value of ```html_snippet``` from create checkout order call response and embed into merchant checkout page (either embed in page served by backend endpoint, or through Ajax call from server and dynamically inject using JavaScript)
+ ```javascript
+ getSnippet(function (htmlSnippet) {
+   var checkoutContainer = document.getElementById('my-checkout-container')
+   checkoutContainer.innerHTML = htmlSnippet
+   var scriptsTags = checkoutContainer.getElementsByTagName('script')
+   // This is necessary otherwise the scripts tags are not going to be evaluated
+   for (var i = 0; i < scriptsTags.length; i++) {
+       var parentNode = scriptsTags[i].parentNode
+       var newScriptTag = document.createElement('script')
+       newScriptTag.type = 'text/javascript'
+       newScriptTag.text = scriptsTags[i].text
+       parentNode.removeChild(scriptsTags[i])
+       parentNode.appendChild(newScriptTag)
+   }
+})
+
+ ```
+
+ This is what it should look like:
+ <p align="center">
+    <img src="https://developers.klarna.com/static/KCO_identified_UK-e29ede7cf11640f41b99f2bf704a7a9a-86ac2.png">
+ </p>
+
+
+---
+### Handling an Existing Order
+
+!> Keep track of Klarna ```order_id``` associated with current customer to avoid creating new order every time customer loads the checkout page. This will allow customer to reload checkout page without having to re-enter any details they have provided.<br><br>
+When customer loads checkout page and they have a Klarna ```order_id``` associated with their session, you should fetch the order from Klarna. If the order contents have changed, you should update the order.
+
+
+#### 1. Retrieve the Order
+Use the checkout order_id to fetch the order from Klarna
+
+##### Retrieve Checkout Order Request
+```JSON
+GET /checkout/v3/orders/order_id
+Authorization: Basic pwhcueUff0MmwLShJiBE9JHA==
+Content-Type: application/json
+```
+
+#### Retrieve Checkout Order Response
+```JSON
+{
+ "order_id": "1203c28c-f101-765f-bed8-f57a2d5e83e0",
+ "status": "checkout_incomplete",
+ "purchase_country": "se",
+ "purchase_currency": "sek",
+ "locale": "en-GB",
+ "billing_address": {.............
+ ..............
+```
+
+#### Update the Checkout Order
+You should update the checkout order to reflect the changes the customer made to the cart by doing another ```POST``` request.
+```JSON
+POST /checkout/v3/orders/order_id
+Authorization: Basic pwhcueUff0MmwLShJiBE9JHA==
+Content-Type: application/json
+{
+ "order_amount": 756682,
+ "order_tax_amount": 151336,
+ "order_lines": [
+   {
+     "type": "physical",
+     "reference": "19-402-SWE",
+     "name": "Camera Travel Set",
+     "quantity": 1,
+     "quantity_unit": "pcs",
+     "unit_price": 603341,
+     "tax_rate": 2500,
+     "total_amount": 503341,
+     "total_discount_amount": 100000,
+     "total_tax_amount": 100668,
+     "image_url": "http://merchant.com/logo.png"
+   },
+   {...........
+   ..............
+```
+You will then get an updated Order Response. :raised_hands:
+
+---
+<br>
+
+<h2 align="center"> SMOOOTH BREAK </h2>
+
+<p align="center">
+  ![logo](https://i.imgur.com/ntwoGGE.gif ':size=500x500')
+</p>
+
+
+---
+
+## Show Purchase Confirmation - Purchase complete :100:
+?> Retrieving the checkout order and rendering the confirmation HTML snippet on your confirmation page <br>
+Once customer completed purchase, they will be redirected to confirmation page specified in ```merchant_urls.confirmation``` property when you created the order.
+
+E.g. with the following merchant urls:
+```JSON
+"merchant_urls": {
+   "terms": "http://merchant.com/tac.php",
+   "checkout": "http://merchant.com/checkout.php?sid={checkout.order.id}",
+   "confirmation": "http://merchant.com/thankyou.php?sid={checkout.order.id}",
+   "push": "http://merchant.com/kco/push.php?checkout_uri={checkout.order.id}"
+ }
+```
+The user would be redirected to merchant_urls.confirmation: ```http://merchant.com/thankyou.php?sid={checkout.order.id}```
+
+#### 1. Retrieve the Checkout Order
+Use the checkout order_id found in the query parameter ```sid``` in ```merchant_urls.confirmation``` to fetch order from Klarna.
+```JSON
+GET /checkout/v3/orders/order_id
+Authorization: Basic pwhcueUff0MmwLShJiBE9JHA==
+Content-Type: application/json
+```
+---
+
+#### 2. Create an Order in Your System
+Create the order in your system with order data that you want to store. See the full resource structure in [Order Management API](/https://developers.klarna.com/api/#order-management-api)
+
+---
+
+#### 3. Render the Confirmation Snippet
+Checkout order now contains updated HTML snippet under ```html_snippet``` property. Display this snippet on your confirmation page.
+
+<h4 align="center">Confirmation snippet</h4>
+<p align="center">
+  <img  src="https://developers.klarna.com/static/KCO_Confirmation_UK-e240b636bc53d97497002bfca17532ef-e6119.png">
+</p>
+
+---
+<br>
+
+---
+
+## Confirm the Purchase
+Confirm that you have received and created an order in your system. This is needed in response to a push notification from Klarna, indicating that customer has completed a purchase.
+?> Use Case: Customer has completed purchase with Klarna Checkout and merchant wants to create associated order in system
+
+#### 1. Handle the Klarna POST Request
+Once customer has completed purchase, Klarna notifies you by sending a POST request to the __push notification URL__ in ```merchant_urls``` object.
+
+Example, with the following ```merchant_urls``` object
+```JSON
+"merchant_urls": {
+   "terms": "http://merchant.com/tac.php",
+   "checkout": "http://merchant.com/checkout.php?sid={checkout.order.id}",
+   "confirmation": "http://merchant.com/thankyou.php?sid={checkout.order.id}",
+   "push": "http://merchant.com/kco/push.php?checkout_uri={checkout.order.id}"
+ }
+```
+You would receive a POST request to the url with placeholder ```{checkout.order.id}``` replaced with correct ```order_id``` and an empty body. E.g. ***http://merchant.com/kco/push.php?checkout_uri=12345***
+
+---
+
+#### 2. Request the Order from Klarna
+Use the ```order_id``` in query parameter ```checkout_uri``` to fetch order from [Order Management API](/https://developers.klarna.com/api/#order-management-api-get-order).
+
+```JSON
+GET /ordermanagement/v1/orders/order_id
+Authorization: Basic pwhcueUff0MmwLShJiBE9JHA==
+Content-Type: application/json
+```
