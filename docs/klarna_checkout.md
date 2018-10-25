@@ -9,7 +9,7 @@
 
 ?> Klarna Checkout consists of 2 parts:
 
- ## Checkout Page Snippet - Create the order
+ ## Checkout Page Snippet - Create the order 🛒
 ### Render the checkout page
 - Call Klarna's server with your customer ```cart details```, ```locale```, ```merchant ID``` and a few more details.
 - Response is a HTML snippet - this needs to be embedded in your checkout page.
@@ -18,7 +18,7 @@
 
 --- 
 
-### Render the confirmation page
+### Render the confirmation page 💫
 After the customer completed the purchase in checkout snippet:
 - Call Klarna to get confirmation page HTML snippet
 - If request is successful, Klarna returns HTML snippet with order confirmation details you need to embed in confirmation page.
@@ -35,7 +35,7 @@ After the customer completed the purchase in checkout snippet:
 </p>
 
 
-## Embed the Checkout Snippet
+## Embed the Checkout Snippet 👨‍💻
 This part starts after the customer has selcted their product(s) on your site and wants to proceed to checkout.
 
 ?> Klarna uses HTTP Basic Auth for authentication. Use API credentials provided <br>
@@ -47,8 +47,8 @@ This part starts after the customer has selcted their product(s) on your site an
 
 ---
 
-### Create a Checkout Order
-#### 1. Configure the Checkout Order
+### Create a Checkout Order 🛍️
+#### 1. Configure the Checkout Order 🔧
 > Items you should configure for the checkout:
 - Merchant ID and [API Credentials](/https://developers.klarna.com/en/gb/kco-v3/test-credentials) provided by Klarna
 - Currency, language (locale), and country to be used (to match the customer experience you want to render)
@@ -59,7 +59,7 @@ This part starts after the customer has selcted their product(s) on your site an
   - Push URL to which Klarna will send an HTTP post request to confirm order [**__mandatory__**]
   - Order validation, Tax & Shipping changes and other notifications
 
-#### 2. Create a Checkout Order
+#### 2. Create a Checkout Order ✅
 Create a Checkout Order request
 ```JSON 
 POST /checkout/v3/orders
@@ -224,7 +224,7 @@ Content-Type: application/json
 }
  ```
 
- #### 3. Render the Snippet in Your Checkout Page
+ #### 3. Render the Snippet in Your Checkout Page 👨‍💻
  Get the value of ```html_snippet``` from create checkout order call response and embed into merchant checkout page (either embed in page served by backend endpoint, or through Ajax call from server and dynamically inject using JavaScript)
  ```javascript
  getSnippet(function (htmlSnippet) {
@@ -251,23 +251,23 @@ Content-Type: application/json
 
 
 ---
-### Handling an Existing Order
+### Handling an Existing Order 💁‍
 
 !> Keep track of Klarna ```order_id``` associated with current customer to avoid creating new order every time customer loads the checkout page. This will allow customer to reload checkout page without having to re-enter any details they have provided.<br><br>
 When customer loads checkout page and they have a Klarna ```order_id``` associated with their session, you should fetch the order from Klarna. If the order contents have changed, you should update the order.
 
 
-#### 1. Retrieve the Order
+#### 1. Retrieve the Order ◀️
 Use the checkout order_id to fetch the order from Klarna
 
-##### Retrieve Checkout Order Request
+##### Retrieve Checkout Order Request 🎣
 ```JSON
 GET /checkout/v3/orders/order_id
 Authorization: Basic pwhcueUff0MmwLShJiBE9JHA==
 Content-Type: application/json
 ```
 
-#### Retrieve Checkout Order Response
+##### Retrieve Checkout Order Response 🎣
 ```JSON
 {
  "order_id": "1203c28c-f101-765f-bed8-f57a2d5e83e0",
@@ -279,7 +279,7 @@ Content-Type: application/json
  ..............
 ```
 
-#### Update the Checkout Order
+##### Update the Checkout Order ➕
 You should update the checkout order to reflect the changes the customer made to the cart by doing another ```POST``` request.
 ```JSON
 POST /checkout/v3/orders/order_id
@@ -334,7 +334,7 @@ E.g. with the following merchant urls:
 ```
 The user would be redirected to merchant_urls.confirmation: ```http://merchant.com/thankyou.php?sid={checkout.order.id}```
 
-#### 1. Retrieve the Checkout Order
+#### 1. Retrieve the Checkout Order 🎣
 Use the checkout order_id found in the query parameter ```sid``` in ```merchant_urls.confirmation``` to fetch order from Klarna.
 ```JSON
 GET /checkout/v3/orders/order_id
@@ -343,12 +343,12 @@ Content-Type: application/json
 ```
 ---
 
-#### 2. Create an Order in Your System
+#### 2. Create an Order in Your System ✍️
 Create the order in your system with order data that you want to store. See the full resource structure in [Order Management API](/https://developers.klarna.com/api/#order-management-api)
 
 ---
 
-#### 3. Render the Confirmation Snippet
+#### 3. Render the Confirmation Snippet 💫
 Checkout order now contains updated HTML snippet under ```html_snippet``` property. Display this snippet on your confirmation page.
 
 <h4 align="center">Confirmation snippet</h4>
@@ -361,11 +361,11 @@ Checkout order now contains updated HTML snippet under ```html_snippet``` proper
 
 ---
 
-## Confirm the Purchase
+## Confirm the Purchase 👍
 Confirm that you have received and created an order in your system. This is needed in response to a push notification from Klarna, indicating that customer has completed a purchase.
 ?> Use Case: Customer has completed purchase with Klarna Checkout and merchant wants to create associated order in system
 
-#### 1. Handle the Klarna POST Request
+#### 1. Handle the Klarna POST Request 📲
 Once customer has completed purchase, Klarna notifies you by sending a POST request to the __push notification URL__ in ```merchant_urls``` object.
 
 Example, with the following ```merchant_urls``` object
@@ -381,7 +381,7 @@ You would receive a POST request to the url with placeholder ```{checkout.order.
 
 ---
 
-#### 2. Request the Order from Klarna
+#### 2. Request the Order from Klarna 🎣
 Use the ```order_id``` in query parameter ```checkout_uri``` to fetch order from [Order Management API](/https://developers.klarna.com/api/#order-management-api-get-order).
 
 ```JSON
@@ -389,3 +389,4 @@ GET /ordermanagement/v1/orders/order_id
 Authorization: Basic pwhcueUff0MmwLShJiBE9JHA==
 Content-Type: application/json
 ```
+
