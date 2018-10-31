@@ -153,17 +153,17 @@ Klarna.Payments.load({
 
 ---
 
-### 4. 2.5 Receive Response from load method execution 🎣
+### 2.5 Receive Response from load method execution 🎣
 When the Javascript SDK has processed the load call, the provided callback will be invoked. This callback will be an object containing the following properties:
 - `show_form: true/false` indicating whether you should make the Klarna option available to the user in your checkout or if not for this order
 - `error` containing details of potential error messages.
 
-#### 4. 2.5.1 show_form: true | Klarna Payments is offered
+#### 2.5.1 show_form: true | Klarna Payments is offered
 No errors returned and Klarna renders the available payment methods to the user in the widget.
 Example:
 <img align="center" src="https://developers.klarna.com/static/UK-KP-d48ae63bd86dd69d0ebbeb1a8dc80e94-e2716.png">
 
-#### 4. 2.5.2 show_form: true && error of invalid fields | Adjust and try again
+#### 2.5.2 show_form: true && error of invalid fields | Adjust and try again
 In this case, the user needs to take action before moving forward. Klarna informs the user about the details of the error in the widget. Optionally, you can interpret the invalid fields in the error object and take appropriate actions.
 ```JSON
 
@@ -174,7 +174,7 @@ In this case, the user needs to take action before moving forward. Klarna inform
 }
 ```
 
-#### 4. 2.5.3 show_form: false | Klarna Payments not offered
+#### 2.5.3 show_form: false | Klarna Payments not offered
 Klarna Payment option will not be provided to the user based on Klarna's evaluation. A message will be displayed to the user in the Widget.
 ```JSON
 {
@@ -185,7 +185,7 @@ Klarna Payment option will not be provided to the user based on Klarna's evaluat
 
 ---
 
-### 4. 2.6 Cart Updates 🛒
+### 2.6 Cart Updates 🛒
 If the user changes something in their cart or their billing details, you can also use load to pass any updates to the Klarna session that might have occurred since the session was created. E.g. the order info has changed since the user added an item to the cart.
 ```javascript
 Klarna.Payments.load({
@@ -231,14 +231,14 @@ Klarna.Payments.load({
 
 
 
-## 4. 3. Authorize 👮‍
+## 3. Authorize 👮‍
 > When customer presses 'buy' button on your page, make an authorization request 
 
 When the user presses buy / continue submit button on your checkout page, you call our Javascript SDK to authorize the order at Klarna and receive an authorization token in return, giving you the flexibility to authorize and place the order in several steps.
 
 !> If you have a: <br> - single-page checkout, you call authorize when the user presses the buy button <br> - multi-page checkout, call authorize when the user clicks on continue/review order button and finalize the order when user presses buy button.
 
-### 4. 3.1 Authorize the order 🚓
+### 3.1 Authorize the order 🚓
 As a merchant, you will not handle sensitive details the user has entered. This will be handled by Klarna. Successful authorization guarantees the order can be created within 60 minutes.
 
 Authorization is made with a client side call to `authorize()`
@@ -247,7 +247,153 @@ You may also pass billing and shipping address details in `authorize()` - this w
 
 !> **_User interaction during authorize call_** <br> When authorizing the order, Klarna conducts a full risk assessment. Therefore, from the point where you call `authorize()` until you receive the callback, you must: <br> 1. Avoid sending another authorize call (e.g. disable the buy button from being clicked again) <br> 2. Show to the user that the order is being processed (e.g. by showing a loading spinner) <br> 3. Prevent user from changing order or billing details (e.g. lock the input fields on your page).
 
+--- 
 
+### 3.2 Act on the callback from the authorize call 🚔
+When the widget has processed the authorization, the callback will be executed.
+The callback is an object containing the following properties:
+- `approved: true/false` - the authorization result is approved / denied 
+- `show_form: true/false` - whether the Klarna Widget should be displayed / hidden
+- `authorization_token` - allows you to create the order server-side - only returned if authorization was approved.
+- `error` - contains details of potential error messages
+
+
+#### 3.2.1 Finalize the authorization 🔚
+`finalize()` is a special call that is needed for 'Pay Now' payment method category in multi-step checkouts. In multi-step checkouts, `authorize()` can be triggered when the user clicks on 'continue' to go to the next step of the checkout.
+
+With 'Pay Now' however, transferring funds should only happen when the user presses the 'buy' button to finalize the purchase. To handle this scenario, you can still call authorize() when user has selected a payment method but with `auto_finalize: false`
+
+```javascript
+Klarna.Payments.authorize(
+  { payment_method_category: ‘pay_now’, auto_finalize: false},
+  {}, 
+  function(res) {
+  // proceed to next checkout page. The finalize_required property in the response indicates 
+  // if finalize is needed or not.
+  // 
+  // res = {
+  //   show_form: true,
+  //   approved: false,
+  //   finalize_required: true
+  // }
+})
+```
+When the user reaches the final page in the checkout and can finalize the purchase, `finalize()` is called. This triggers the transfer of funds and returns the `authorization_token` in the finalize callback.
+If finalization was not needed in the `authorize()` call (e.g. for pay later) `finalize()` can still be called and will return the `authorization_token` so that the implementation remains the same for all payment method categories.
+
+`finalize()` example:
+```javascript
+Klarna.Payments.finalize(
+  {payment_method_category: ‘pay_now’},
+  {}, 
+  function(res) {
+  // res = {
+  //   show_form: true,
+  //   approved: true,
+  //   authorization_token: ...
+  // }
+})
+```
+
+#### 3.2.2 Order approved 🙌
+If `approved: true` - Klarna has approved the authorization of credit for this order
+```javascript
+{
+   authorization_token: "b4bd3423-24e3", 
+   approved: true, 
+   show_form: true
+}
+```
+The `authorization_token` allows you to complete the order by the server-side place order call. The token is valid for 60 minutes, during which authorization is guaranteed. In case, place order is done after expiry, Klarna will try to re-authorize the order, but successful outcome cannot be guaranteed.
+
+?> Best practice: Store authorization_token in hidden form field and submit it to backend with 'buy'/'place order' form submit button
+
+
+#### 3.2.2 Order not approved 😞
+If `approved: false` - Klarna cannot approve the purchase. There are now 2 options:
+- **_More info needed_**: The widget will display an error message to the user, asking them to correct / add additional information before re-authorizing the order.
+- **_Customer interaction aborted_**: If `show_form: true` and no `error` included in callback, user has aborted a required interaction in the widget. In this case, you should keep showing Klarna's payment options as the customer might want to try to complete the purchase again with Klarna.
+- **_Order declined_**
+If `show_form: false`, the order is declined. The widget should be hidden and the user should select another payment method.
+
+---
+
+### 3.3 Tokenization 🉑
+With an `authorization_token`, it’s possible to create tokens for recurring charges or directly place an order using the order endpoint.
+The token endpoint is called to tokenise the payment method and create the chargeable customer token. The server call includes the `authorization_token` in the URL and a successful registration for a token would return a `customer_token` id, which can be used in order to charge the customer at a later stage without the customer being present.
+
+!> Create Customer Token with authorization token:
+```JSON
+POST /payments/v1/authorizations/{authorizationToken}/customer-token
+Authorization: Basic pwhcueUff0MmwLShJiBE9JHA==
+Content-Type: application/json
+
+{
+  "purchase_country": "SE",
+  "locale": "sv-SE",
+  "billing_address" : {
+    "given_name": "Doe",
+    "family_name": "John",
+    "email": "direct_debit@klarna.com",
+    "phone": "01895808221",
+    "street_address": "Stårgatan 1",
+    "postal_code": "12345",
+    "city": "Ankeborg",
+    "country": "SE"
+  },
+  "description": "MySaaS subscription",
+  "intended_use": "subscription",
+  "merchant_urls": {
+    "confirmation": "string"
+  }
+}
+```
+
+?> The response will contain a redirect URL to which the user should be redirected. The user will bounce through Klarna and be redirected to the confirmation URL provided in the API calls.
+
+```JSON
+HTTP/1.1 200 OK
+
+Content-Type: application/json
+Klarna-Correlation-Id: e19dc121-1276-419d-882a-c343d58fb9aa
+
+{
+  "token_id": "0b1d9815-165e-42e2-8867-35bc03789e00",
+  "redirect_url": "string"
+}
+```
+### 3.4 Release Authorization 🆓
+After creating a customer token, the authorized amount can be released if the authorization_token won't be used to place the order immediately. Releasing the authorized amount will free up available purchase amount for the user. This is done by performing a DELETE operation:
+```JSON
+DELETE /payments/v1/authorizations/{authorizationToken}
+Authorization: Basic pwhcueUff0MmwLShJiBE9JHA==
+Content-Type: application/json
+{ }
+```
+
+Example response:
+```JSON
+HTTP/1.1 204 No Content
+
+Content-Type: application/json
+Klarna-Correlation-Id: e19dc121-1276-419d-882a-c343d58fb9aa
+
+{ }
+```
+
+
+
+
+---
+<h2 align="center">SMOOOTH BREAK</h2>
+
+<div align="center">
+
+  ![logo](https://media1.giphy.com/media/X6uVxBumRxgzA1ANfe/200w.webp?cid=3640f6095bda051062464c3667877051 )
+
+</div>
+
+---
 
 ## 4. Place Order 💸
 > Once the order is authorized successfully, place the order using the authorization token from the previous step
