@@ -10,7 +10,7 @@
 ?> Klarna Checkout consists of 2 parts:
 
  ## Checkout Page Snippet - Create the order 🛒
-### Render the checkout page
+### Render the checkout page 👩‍💻
 - Call Klarna's server with your customer ```cart details```, ```locale```, ```merchant ID``` and a few more details.
 - Response is a HTML snippet - this needs to be embedded in your checkout page.
 
@@ -43,14 +43,14 @@ This part starts after the customer has selcted their product(s) on your site an
 ```password``` <br>
 ```Authentication: Base64(username:password)```
 
-!> Klarna's EU and US environments have different endpoints for testing and live purchases. All requests go through HTTPS. [Klarna's API endpoints](/https://developers.klarna.com/api/#api-urls)
+!> Klarna's EU and US environments have different endpoints for testing and live purchases. All requests go through HTTPS. [Klarna's API endpoints](https://developers.klarna.com/api/#api-urls)
 
 ---
 
 ### Create a Checkout Order 🛍️
 #### 1. Configure the Checkout Order 🔧
 > Items you should configure for the checkout:
-- Merchant ID and [API Credentials](/https://developers.klarna.com/en/gb/kco-v3/test-credentials) provided by Klarna
+- Merchant ID and [API Credentials](https://developers.klarna.com/en/gb/kco-v3/test-credentials) provided by Klarna
 - Currency, language (locale), and country to be used (to match the customer experience you want to render)
 - Endpoints to be used by Klarna Checkout:
   - Terms & conditions URL [**__mandatory__**]
@@ -344,7 +344,7 @@ Content-Type: application/json
 ---
 
 #### 2. Create an Order in Your System ✍️
-Create the order in your system with order data that you want to store. See the full resource structure in [Order Management API](/https://developers.klarna.com/api/#order-management-api)
+Create the order in your system with order data that you want to store. See the full resource structure in [Order Management API](https://developers.klarna.com/api/#order-management-api)
 
 ---
 
@@ -363,6 +363,7 @@ Checkout order now contains updated HTML snippet under ```html_snippet``` proper
 
 ## Confirm the Purchase 👍
 Confirm that you have received and created an order in your system. This is needed in response to a push notification from Klarna, indicating that customer has completed a purchase.
+
 ?> Use Case: Customer has completed purchase with Klarna Checkout and merchant wants to create associated order in system
 
 #### 1. Handle the Klarna POST Request 📲
@@ -382,7 +383,7 @@ You would receive a POST request to the url with placeholder ```{checkout.order.
 ---
 
 #### 2. Request the Order from Klarna 🎣
-Use the ```order_id``` in query parameter ```checkout_uri``` to fetch order from [Order Management API](/https://developers.klarna.com/api/#order-management-api-get-order).
+Use the ```order_id``` in query parameter ```checkout_uri``` to fetch order from [Order Management API](https://developers.klarna.com/api/#order-management-api-get-order).
 
 ```JSON
 GET /ordermanagement/v1/orders/order_id
@@ -390,3 +391,24 @@ Authorization: Basic pwhcueUff0MmwLShJiBE9JHA==
 Content-Type: application/json
 ```
 
+#### 3. Backup Order Creation 🏬
+Confirmation page may fail to load even though purchase is confirmed by Klarna. However, once merchant receives POST request from Klarna at push confirmation endpoint, merchant can be assured that purchase was successful, and merchant should create the order if not done so already.
+
+#### 4. Acknowledge the Order ✅
+Next, merchant needs to send a request to Klarna to acknowledge the order. 
+``` JSON
+POST /ordermanagement/v1/orders/order_id/acknowledge
+Authorization: Basic pwhcueUff0MmwLShJiBE9JHA==
+Content-Type: application/json
+```
+
+?> Klarna will send notification every 2 hours for 48 hours or until the merchant confirms that they have received the order. After 48 hours, Klarna stops sending push notification, but order is still open and can be captured or updated as normal.
+
+##### Order Confirmation and Order Confirmation Push 👊
+!> 1. There should be an attempt to acknowledge the order on the confirmation page <br> 2. The order confirmation push should be implemented as a backup <br> 3. If order doesn't exist when push is received, it should be created. If it shouldn't be shipped, order should be cancelled immediately. <br> 4. Every order should be acknowledged or cancelled. Orders that will not be shipped should be cancelled immediately. <br>
+
+
+### Ship and Capture the Order to Finalize the Payment
+At this point, order has been confirmed and merchant can proceed with next steps in order to receive payment from Klarna for theo order. Once product has been shipped, merchant needs to capture the order to finalize payment. Order can be found in Klarna's Merchant Portal or merchant can integrate with [Order Management API](https://developers.klarna.com/api/#order-management-api)
+
+?> Check out some [Best Practices](https://developers.klarna.com/en/gb/kco-v3/checkout/best-practices)
