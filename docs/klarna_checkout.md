@@ -14,14 +14,12 @@
 - Call Klarna's server with your customer ```cart details```, ```locale```, ```merchant ID``` and a few more details.
 - Response is a HTML snippet - this needs to be embedded in your checkout page.
 
-!> Add image of checkout??
-
 --- 
 
 ### Render the confirmation page 💫
 After the customer completed the purchase in checkout snippet:
 - Call Klarna to get confirmation page HTML snippet
-- If request is successful, Klarna returns HTML snippet with order confirmation details you need to embed in confirmation page.
+- If request is successful, Klarna returns HTML snippet with order confirmation details you need to embed in the confirmation page.
 
 > ***__Needed from the merchant:__***
 - **Checkout** and **Confirmation** page each containing div that will contain HTML snippets received from Klarna
@@ -225,7 +223,7 @@ Content-Type: application/json
  ```
 
  #### 3. Render the Snippet in Your Checkout Page 👨‍💻
- Get the value of ```html_snippet``` from create checkout order call response and embed into merchant checkout page (either embed in page served by backend endpoint, or through Ajax call from server and dynamically inject using JavaScript)
+ Get the value of ```html_snippet``` from the create checkout order call response and embed into merchant checkout page (either embed in page served by backend endpoint, or through Ajax call from server and dynamically inject using JavaScript)
  ```javascript
  getSnippet(function (htmlSnippet) {
    var checkoutContainer = document.getElementById('my-checkout-container')
@@ -312,9 +310,11 @@ You will then get an updated Order Response. :raised_hands:
 
 <h2 align="center"> SMOOOTH BREAK </h2>
 
-<p align="center">
+<div align="center">
+
   ![logo](https://i.imgur.com/ntwoGGE.gif ':size=500x500')
-</p>
+
+</div>
 
 
 ---

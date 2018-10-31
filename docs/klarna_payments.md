@@ -1,1 +1,256 @@
 # Klarna Payments
+?> Klarna offers 'Pay Now', 'Pay Later', and 'Slice it' payment options via a widget that the merchant adds inline on the checkout page
+
+> Klarna's payment widget lets you:<br> - easily add Klarna's payment options in your checkout <br> - integrate this using a JSON REST API and a JavaScript SDK <br> - apply your visual guidelines to get a branded experience
+
+## Integration Process Overview
+<img align="center" src="https://developers.klarna.com/static/Klarna_Payments-3e34293a104a177fc60851c9d2d97589-89906.png">
+
+--- 
+
+### Steps 👣
+
+## 1. Create Session Call 🏁
+> When consumer proceeds to merchant checkout page, create a session with Klarna
+The session is created server side via Klarna's REST API before the widget is used.
+
+!> When the session is created, you receive available `payment method categories`, a `session id`, and a `client token`
+The session_id can be used to update the session using the REST API, the client_token should be passed to the browser. A Session is valid for 48 hours.
+
+### 1.1 Create the session through the API call 📲
+Send the shopping cart details, country, currency, and locale via server-side to [Klarna's REST API](https://developers.klarna.com/api/#payments-api)
+
+```JSON
+POST /payments/v1/sessions
+Authorization: Basic pwhcueUff0MmwLShJiBE9JHA==
+Content-Type: application/json
+
+{
+	"purchase_country": "GB",
+	"purchase_currency": "GBP",
+	"locale": "en-GB",
+	"order_amount": 10,
+	"order_tax_amount": 0,
+	"order_lines": [{
+		"type": "physical",
+		"reference": "19-402",
+		"name": "Battery Power Pack",
+		"quantity": 1,
+		"unit_price": 10,
+		"tax_rate": 0,
+		"total_amount": 10,
+		"total_discount_amount": 0,
+		"total_tax_amount": 0
+	}]
+}
+```
+### 1.2 Create the Session Response 🎣
+?> API returns the following data <br> - `session_id` used for server-side updates on the session via server-side REST API <br> - `client_token` used to initialize the widget <br> - `payment_method_category` represents payment methods that are available for this purchase. It's required when loading the widget.
+
+Example response:
+```JSON
+HTTP/1.1 200 OK
+Content-Type: application/json
+
+{
+  "session_id": "068df369-13a7-4d47-a564-62f8408bb760",
+  "client_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjAwMDAwMDAwMDAtMDAwMDAtMDAwMC0wMDAwMDAwMC0wMDAwIiwidXJsIjoiaHR0cHM6Ly9jcmVkaXQtZXUua2xhcm5hLmNvbSJ9.A_rHWMSXQN2NRNGYTREBTkGwYwtm-sulkSDMvlJL87M",
+  "payment_method_categories": [{
+      "identifier": "pay_later"
+      "name" : "Pay later.",
+      "asset_urls" : {
+        "descriptive" : "https://cdn.klarna.com/1.0/shared/image/generic/badge/en_us/pay_later/descriptive/pink.svg",
+        "standard" : "https://cdn.klarna.com/1.0/shared/image/generic/badge/en_us/pay_later/standard/pink.svg"
+      }
+  }]
+}
+```
+
+### 1.3 Session Updates
+If the checkout page is reloaded (e.g. customer goes back to product page and then back to checkout), you can update an existing session. This is done by making a POST call to [update the session](https://developers.klarna.com/api/#payments-api-update-an-existing-credit-session) using the same payload structure as when creating the session.
+
+```JSON
+POST /payments/v1/sessions/068df369-13a7-4d47-a564-62f8408bb760
+Authorization: Basic pwhcueUff0MmwLShJiBE9JHA==
+Content-Type: application/json
+
+{
+	"order_amount": 998,
+	"order_tax_amount": 0,
+	"order_lines": [{
+		"type": "physical",
+		"reference": "19-315",
+		"name": "Battery Power Pack",
+		"quantity": 2,
+		"unit_price": 499,
+		"tax_rate": 0,
+		"total_amount": 998,
+		"total_discount_amount": 0,
+		"total_tax_amount": 0
+	}]
+}
+
+```
+?> This call will update the Klarna session and has an empty response
+```JSON
+HTTP/1.1 204 No content
+Content-Type: application/json
+```
+
+---
+
+## 2. Present Widget 🎉
+> When you want to display the Klarna Payment methods to the consumer, initiate and load the widget
+During this step, the Klarna widget is initialized, loaded and displays the available Klarna payment options to the user. You should render this on the checkout page along other payment methods offered.
+This should be done using the [JavaScript SDK](https://credit.klarnacdn.net/lib/v1/index.html)
+
+### 2.1 Add the JavaScript SDK to your page 👩‍💻
+Add the following script in the body section of your checkout page and it will load the SDK into your page
+```javascript
+<script>
+  window.klarnaAsyncCallback = function () {
+
+    // This is where you start calling Klarna's JS SDK functions
+    // 
+    // Klarna.Payments.init({....})
+
+  };
+</script>
+<script src="https://x.klarnacdn.net/kp/lib/v1/api.js" async></script>
+```
+---
+
+### 2.2 Initialize the SDK 🌟
+Initiate the SDK by calling `init`, passing the `client_token` that was returned in the ['create a session'](http://localhost:3000/#/klarna_payments?id=_1-create-session-call-%f0%9f%8f%81) step
+
+```javascript
+Klarna.Payments.init({
+  client_token: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJmb28iOiJiYXIifQ.dtxWM6MIcgoeMgH87tGvsNDY6cH'
+})
+```
+---
+
+### 2.3 Add a container on your page ➕
+To specify where you want the widget to display, add a container to your checkout page.
+```html
+<div id="klarna_container"></div>
+```
+
+--- 
+
+### 2.4 Load the Klarna Widget 🤸‍
+Load the Klarna widget using the `load` call. Pass the id of your container, and specify the `payment_method_category`. The available payment method categories were provided in response of the [create session call](http://localhost:3000/#/klarna_payments?id=_12-create-the-session-response-%f0%9f%8e%a3).
+
+```javascript
+Klarna.Payments.load({
+    container: '#klarna-payments-container',
+    payment_method_category: 'pay_later'
+  }, function (res) {
+    console.debug(res);
+})
+```
+!> Best Practice: the `load` method should be called when rendering the checkout page so that you ensure the widget has fully loaded by the time the consumer wants to interact with or select Klarna as payment method.
+
+---
+
+### 4. 2.5 Receive Response from load method execution 🎣
+When the Javascript SDK has processed the load call, the provided callback will be invoked. This callback will be an object containing the following properties:
+- `show_form: true/false` indicating whether you should make the Klarna option available to the user in your checkout or if not for this order
+- `error` containing details of potential error messages.
+
+#### 4. 2.5.1 show_form: true | Klarna Payments is offered
+No errors returned and Klarna renders the available payment methods to the user in the widget.
+Example:
+<img align="center" src="https://developers.klarna.com/static/UK-KP-d48ae63bd86dd69d0ebbeb1a8dc80e94-e2716.png">
+
+#### 4. 2.5.2 show_form: true && error of invalid fields | Adjust and try again
+In this case, the user needs to take action before moving forward. Klarna informs the user about the details of the error in the widget. Optionally, you can interpret the invalid fields in the error object and take appropriate actions.
+```JSON
+
+   show_form: true, 
+   error: {
+            invalid_fields: ["billing_address.email"]
+          }
+}
+```
+
+#### 4. 2.5.3 show_form: false | Klarna Payments not offered
+Klarna Payment option will not be provided to the user based on Klarna's evaluation. A message will be displayed to the user in the Widget.
+```JSON
+{
+   show_form: false
+}
+```
+?> In this case, best practice is to hide, grey out, or remove the Klarna option, disable clicking, and provide the user with other payment options.
+
+---
+
+### 4. 2.6 Cart Updates 🛒
+If the user changes something in their cart or their billing details, you can also use load to pass any updates to the Klarna session that might have occurred since the session was created. E.g. the order info has changed since the user added an item to the cart.
+```javascript
+Klarna.Payments.load({
+  container: "#klarna_container",
+  payment_method_category: 'pay_later' 
+}, {
+  "purchase_country": "GB",
+  "purchase_currency": "GBP",
+  "locale": "en-GB",
+  "order_amount": 20,
+  "order_tax_amount": 0,
+  "order_lines": [{
+    "type": "physical",
+    "reference": "19-402",
+    "name": "Battery Power Pack",
+    "quantity": 2,
+    "unit_price": 10,
+    "tax_rate": 0,
+    "total_amount": 20,
+    "total_discount_amount": 0,
+    "total_tax_amount": 0	
+ }]
+}
+, function(res) {
+  console.debug(res);
+})
+```
+
+?> When the customer presses 'Buy' or 'Continue' button on your site, you will authorize the order.
+
+---
+<h2 align="center">SMOOOTH BREAK</h2>
+
+<div align="center">
+
+  ![logo](https://media.giphy.com/media/ESF5Iltz4M1MY/giphy.gif )
+
+</div>
+
+
+---
+
+
+
+
+## 4. 3. Authorize 👮‍
+> When customer presses 'buy' button on your page, make an authorization request 
+
+When the user presses buy / continue submit button on your checkout page, you call our Javascript SDK to authorize the order at Klarna and receive an authorization token in return, giving you the flexibility to authorize and place the order in several steps.
+
+!> If you have a: <br> - single-page checkout, you call authorize when the user presses the buy button <br> - multi-page checkout, call authorize when the user clicks on continue/review order button and finalize the order when user presses buy button.
+
+### 4. 3.1 Authorize the order 🚓
+As a merchant, you will not handle sensitive details the user has entered. This will be handled by Klarna. Successful authorization guarantees the order can be created within 60 minutes.
+
+Authorization is made with a client side call to `authorize()`
+Successful authorization: `approved: true` results in an `authorization_token` that should be used when creating the order. The response object also contains `show_form` key which indicates whether Klarna payment option should remain available (e.g. in case there are errors that the user can resolve) or if you should remove it completely.
+You may also pass billing and shipping address details in `authorize()` - this will all be used by Klarna when authorizing the order.
+
+!> **_User interaction during authorize call_** <br> When authorizing the order, Klarna conducts a full risk assessment. Therefore, from the point where you call `authorize()` until you receive the callback, you must: <br> 1. Avoid sending another authorize call (e.g. disable the buy button from being clicked again) <br> 2. Show to the user that the order is being processed (e.g. by showing a loading spinner) <br> 3. Prevent user from changing order or billing details (e.g. lock the input fields on your page).
+
+
+
+## 4. Place Order 💸
+> Once the order is authorized successfully, place the order using the authorization token from the previous step
+
+After the order is created, you can manage it either manually via the Merchant Portal or through Klarna's [Order Management API](https://developers.klarna.com/en/gb/kco-v3/order-management)
+
