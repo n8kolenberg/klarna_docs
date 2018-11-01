@@ -363,7 +363,7 @@ Klarna-Correlation-Id: e19dc121-1276-419d-882a-c343d58fb9aa
 }
 ```
 ### 3.4 Release Authorization 🆓
-After creating a customer token, the authorized amount can be released if the authorization_token won't be used to place the order immediately. Releasing the authorized amount will free up available purchase amount for the user. This is done by performing a DELETE operation:
+After creating a customer token, the authorized amount can be released if the `authorization_token` won't be used to place the order immediately. Releasing the authorized amount will free up available purchase amount for the user. This is done by performing a DELETE operation:
 ```JSON
 DELETE /payments/v1/authorizations/{authorizationToken}
 Authorization: Basic pwhcueUff0MmwLShJiBE9JHA==
@@ -396,7 +396,93 @@ Klarna-Correlation-Id: e19dc121-1276-419d-882a-c343d58fb9aa
 ---
 
 ## 4. Place Order 💸
-> Once the order is authorized successfully, place the order using the authorization token from the previous step
+> Once the order is authorized successfully, place the order using the authorization token from the Step 3. Authorize. For a recurring order, the customer_token from the previous step can be used.
 
 After the order is created, you can manage it either manually via the Merchant Portal or through Klarna's [Order Management API](https://developers.klarna.com/en/gb/kco-v3/order-management)
+
+### 4.1 The Merchant places a single order 👆
+When you received the `authorization_token`, you can [place an order](https://developers.klarna.com/api/#payments-api-create-a-new-order).
+
+!> If the order is placed more than 60 minutes after authorization_token is provided or different details are provided, order may be rejected.
+
+_Example of order placement:_
+```JSON
+POST /payments/v1/authorizations/<authorization_token>/order
+Authorization: Basic pwhcueUff0MmwLShJiBE9JHA==
+Content-Type: application/json
+
+{
+    "purchase_country": "GB",
+    "purchase_currency": "GBP",
+    "billing_address": {
+        "given_name": "John",
+        "family_name": "Doe",
+        "email": "john@doe.com",
+        "title": "Mr",
+        "street_address": "13 New Burlington St",
+        "street_address2": "Apt 214",
+        "postal_code": "W13 3BG",
+        "city": "London",
+        "region": "",
+        "phone": "01895808221",
+        "country": "GB"
+    },
+    "shipping_address": {
+        "given_name": "John",
+        "family_name": "Doe",
+        "email": "john@doe.com",
+        "title": "Mr",
+        "street_address": "13 New Burlington St",
+        "street_address2": "Apt 214",
+        "postal_code": "W13 3BG",
+        "city": "London",
+        "region": "",
+        "phone": "01895808221",
+        "country": "GB"
+    },
+    "order_amount": 10,
+    "order_tax_amount": 0, // optional
+    "order_lines": [
+        {
+            "type": "physical", // optional
+            "reference": "19-402", // optional
+            "name": "Battery Power Pack",
+            "quantity": 1,
+            "unit_price": 10,
+            "tax_rate": 0, // optional
+            "total_amount": 10,
+            "total_discount_amount": 0, // optional
+            "total_tax_amount": 0, // optional
+            "product_url": "https://www.estore.com/products/f2a8d7e34", // optional
+            "image_url": "https://www.exampleobjects.com/logo.png" // optional
+        }
+    ],
+    "merchant_urls": {
+        "confirmation": "https://example.com/confirmation",
+        "notification": "https://example.com/pending" // optional
+    },
+    "merchant_reference1": "45aa52f387871e3a210645d4", // optional
+}
+```
+---
+### 4.2 Handle Order 👷‍
+!> You either get a successful response or an error
+The response contains the following information:
+- `order_id` - used for order management interactions, such as capturing (when Klarna pays the merchant) or refunding the order
+- `redirect_url` - a URL to which you immediately redirect the user
+- `fraud_status` - may indicate that this is a suspected fraudulent order
+
+#### 4.2.1 Successful response: the order is confirmed ✅
+You received `order_id`, `redirect_url` and `fraud_status`: ACCEPTED
+_Example response:_
+```JSON
+{
+  "order_id": "3eaeb557-5e30-47f8-b840-b8d987f5945d",
+  "redirect_url": "https://payments.klarna.com/redirect/...",
+  "fraud_status": "ACCEPTED"
+}
+```
+?> Store `order_id` for future reference during order fulfillment or service center management.
+
+!> In order for Klarna to securely handle the data and optimize the purchase flow, they need to interact with the customer's browser as a first party (not in an iframe or similar). <br> - _This is achieved by bouncing the browser to a klarna.com page before presenting the merchant's confirmation page._<br> - The merchant provides their confirmation page together with the rest of the order details and Klarna responds with a redirect url that will take the customer to the confirmation page. <br> - The merchant should send the customer's browser to the `redirect_url` provided in the response.
 
