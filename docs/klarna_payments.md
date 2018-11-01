@@ -11,7 +11,7 @@
 ### Steps 👣
 
 ## 1. Create Session Call 🏁
-> When consumer proceeds to merchant checkout page, create a session with Klarna
+> When consumer proceeds to merchant checkout page, create a session with Klarna.
 The session is created server side via Klarna's REST API before the widget is used.
 
 !> When the session is created, you receive available `payment method categories`, a `session id`, and a `client token`
@@ -363,7 +363,7 @@ Klarna-Correlation-Id: e19dc121-1276-419d-882a-c343d58fb9aa
 }
 ```
 ### 3.4 Release Authorization 🆓
-After creating a customer token, the authorized amount can be released if the authorization_token won't be used to place the order immediately. Releasing the authorized amount will free up available purchase amount for the user. This is done by performing a DELETE operation:
+After creating a customer token, the authorized amount can be released if the `authorization_token` won't be used to place the order immediately. Releasing the authorized amount will free up available purchase amount for the user. This is done by performing a DELETE operation:
 ```JSON
 DELETE /payments/v1/authorizations/{authorizationToken}
 Authorization: Basic pwhcueUff0MmwLShJiBE9JHA==
@@ -396,7 +396,168 @@ Klarna-Correlation-Id: e19dc121-1276-419d-882a-c343d58fb9aa
 ---
 
 ## 4. Place Order 💸
-> Once the order is authorized successfully, place the order using the authorization token from the previous step
+> Once the order is authorized successfully, place the order using the authorization token from the Step 3. Authorize. For a recurring order, the customer_token from the previous step can be used.
 
 After the order is created, you can manage it either manually via the Merchant Portal or through Klarna's [Order Management API](https://developers.klarna.com/en/gb/kco-v3/order-management)
+
+### 4.1 The Merchant places a single order 👆
+When you received the `authorization_token`, you can [place an order](https://developers.klarna.com/api/#payments-api-create-a-new-order).
+
+!> If the order is placed more than 60 minutes after authorization_token is provided or different details are provided, order may be rejected.
+
+_Example of order placement:_
+```JSON
+POST /payments/v1/authorizations/<authorization_token>/order
+Authorization: Basic pwhcueUff0MmwLShJiBE9JHA==
+Content-Type: application/json
+
+{
+    "purchase_country": "GB",
+    "purchase_currency": "GBP",
+    "billing_address": {
+        "given_name": "John",
+        "family_name": "Doe",
+        "email": "john@doe.com",
+        "title": "Mr",
+        "street_address": "13 New Burlington St",
+        "street_address2": "Apt 214",
+        "postal_code": "W13 3BG",
+        "city": "London",
+        "region": "",
+        "phone": "01895808221",
+        "country": "GB"
+    },
+    "shipping_address": {
+        "given_name": "John",
+        "family_name": "Doe",
+        "email": "john@doe.com",
+        "title": "Mr",
+        "street_address": "13 New Burlington St",
+        "street_address2": "Apt 214",
+        "postal_code": "W13 3BG",
+        "city": "London",
+        "region": "",
+        "phone": "01895808221",
+        "country": "GB"
+    },
+    "order_amount": 10,
+    "order_tax_amount": 0, // optional
+    "order_lines": [
+        {
+            "type": "physical", // optional
+            "reference": "19-402", // optional
+            "name": "Battery Power Pack",
+            "quantity": 1,
+            "unit_price": 10,
+            "tax_rate": 0, // optional
+            "total_amount": 10,
+            "total_discount_amount": 0, // optional
+            "total_tax_amount": 0, // optional
+            "product_url": "https://www.estore.com/products/f2a8d7e34", // optional
+            "image_url": "https://www.exampleobjects.com/logo.png" // optional
+        }
+    ],
+    "merchant_urls": {
+        "confirmation": "https://example.com/confirmation",
+        "notification": "https://example.com/pending" // optional
+    },
+    "merchant_reference1": "45aa52f387871e3a210645d4", // optional
+}
+```
+---
+### 4.2 Handle Order 👷‍
+!> You either get a successful response or an error
+The response contains the following information:
+- `order_id` - used for order management interactions, such as capturing (when Klarna pays the merchant) or refunding the order
+- `redirect_url` - a URL to which you immediately redirect the user
+- `fraud_status` - may indicate that this is a suspected fraudulent order
+
+#### 4.2.1 Successful response: the order is confirmed ✅
+You received `order_id`, `redirect_url` and `fraud_status`: ACCEPTED
+_Example response:_
+```JSON
+{
+  "order_id": "3eaeb557-5e30-47f8-b840-b8d987f5945d",
+  "redirect_url": "https://payments.klarna.com/redirect/...",
+  "fraud_status": "ACCEPTED"
+}
+```
+?> Store `order_id` for future reference during order fulfillment or service center management.
+
+!> In order for Klarna to securely handle the data and optimize the purchase flow, they need to interact with the customer's browser as a first party (not in an iframe or similar). <br> - _This is achieved by bouncing the browser to a klarna.com page before presenting the merchant's confirmation page._<br> - The merchant provides their confirmation page together with the rest of the order details and Klarna responds with a redirect url that will take the customer to the confirmation page. <br> - The merchant should send the customer's browser to the `redirect_url` provided in the response.
+
+#### 4.2.2 Pending Order ✋
+In stead of immediately accepting the order, Klarna may flag the transaction for additional review. This is indicated in `fraud_status`: PENDING
+
+
+#### 4.2.3 Error 🙅‍
+**Two reasons Klarna would reject:**
+1. Order was placed in within the required time window, but data didn't match that which was provided during the authorization call
+2. Order was placed outside required time window and Klarna couldn't re-authorize successfully.
+
+?> If you want to give the consumer the option to complete the order again, [update the session](http://localhost:3000/#/klarna_payments?id=_1-create-session-call-%f0%9f%8f%81) and [reload the widget](http://localhost:3000/#/klarna_payments?id=_2-present-widget-%f0%9f%8e%89).
+
+---
+
+### 4.3 Place a Recurring Order (tokenization) 💫
+The customer can charged at any time by creating an order using the `customer_token`. This is done by calling the customer_token API with the customer_token ID and the data of the order to be created.
+The order can be automatically captured (`auto_capture`: true).
+
+_Example_
+```JSON
+POST /customer-token/v1/tokens/{customerToken}/order
+Authorization: Basic pwhcueUff0MmwLShJiBE9JHA==
+Content-Type: application/json
+
+{
+	"merchant_reference1": "45aa52f387871e3a210645d4",
+	"merchant_data": "optional string",
+	"locale": "sv-SE",
+	"auto_capture": true,
+	"purchase_currency": "SEK",
+	"order_amount": 9900,
+	"order_tax_amount": 0,
+	"order_lines": [{
+		"type": "digital",
+		"reference": "ABC123",
+		"name": "Premium package",
+		"quantity": 1,
+		"unit_price": 9900,
+		"tax_rate": 0,
+		"total_amount": 9900,
+		"total_discount_amount": 0,
+		"total_tax_amount": 0
+	}]
+}
+//== Success response format
+{
+	"order_id": "a89ec121-1276-419d-882a-c343d58fd1bc",
+	"fraud_status": "ACCEPTED"
+}
+
+//== Error response format
+{
+	"error_code" : "ERROR_CODE",
+	"error_messages" : ["Array of error messages"],
+	"correlation_id" : "Unique id for this request used for troubleshooting."
+}
+
+
+```
+
+
+| Error Code | HTTP Status | Description|
+| -----------|-------------|------------|
+| | 200 |Order successfully created. Order ID returned. | 
+| TOKEN_NOT_FOUND| 404 |Customer token not found |
+| TOKEN_SUSPENDED| 403| Customer token has been suspended|
+| TOKEN_CANCELLED| 403| Customer token has been cancelled|
+| TOKEN_FORBIDDEN| 403|	Customer token usage forbidden |
+|BAD_REQUEST | 400| Bad request. Error message includes more details.|
+| UNAVAILABLE_PAYMENT_METHOD| 403| Payment method type is not available.|
+| PAYMENT_METHOD_CURRENCY_MISMATCH| 403| Payment method not available for given currency|
+| PAYMENT_METHOD_FAILED| 403| Purchase for payment method failed. You can try again for PAYMENT_METHOD_FAILED errors.|
+| INTERNAL_SERVER_ERROR	| 500| Internal server error.|
+| SERVICE_UNAVAILABLE| 503| Purchase failed because of a temporary internal Klarna error. You can try again for a 503.
+|
 
