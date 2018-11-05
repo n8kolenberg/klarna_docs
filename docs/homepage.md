@@ -5,6 +5,11 @@
 
 !> [Klarna Payments](/klarna_payments)
 
+<p align="center">
+  <img src="https://res.cloudinary.com/n8dawg/image/upload/v1541408493/KCO_vs_KP.png">
+</p>
+<br>
+
 For testing purposes, I used the following [test site](/https://ide.c9.io/n8kolenberg/ewoocomms) and test credentials:
 - Username: _PK03011_\__6c13f07cff67_
 - Password: _CnXzI9E2K5E8NCtz_
