@@ -27,6 +27,15 @@ After the customer completed the purchase in checkout snippet:
 - **Terms and Conditions URL**. Klarna will provide customer with link to your terms and conditions in certain phases of the order
 - Review security of merchant site
 
+
+
+### Overview of Klarna Checkout Process
+<p align="center">
+ <img width=500 height=500 src="https://res.cloudinary.com/n8dawg/image/upload/v1541169707/Klarna%20Checkout%20Diagram.png">
+</p>
+
+
+
 ### Overview of Checkout Process and Client to Server Communication
 <p align="center">
   <img  width=500 height=500 src="https://res.cloudinary.com/n8dawg/image/upload/v1531058456/s2s.png">
