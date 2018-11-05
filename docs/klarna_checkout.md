@@ -31,7 +31,7 @@ After the customer completed the purchase in checkout snippet:
 
 ### Overview of Klarna Checkout Process
 <p align="center">
- <img width=500 height=500 src="https://res.cloudinary.com/n8dawg/image/upload/v1541169707/Klarna%20Checkout%20Diagram.png">
+ <img src="https://res.cloudinary.com/n8dawg/image/upload/v1541169707/Klarna%20Checkout%20Diagram.png">
 </p>
 
 
