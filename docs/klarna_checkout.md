@@ -38,7 +38,7 @@ After the customer completed the purchase in checkout snippet:
 
 ### Overview of Checkout Process and Client to Server Communication
 <p align="center">
-  <img  width=500 height=500 src="https://res.cloudinary.com/n8dawg/image/upload/v1531058456/s2s.png">
+  <img src="https://res.cloudinary.com/n8dawg/image/upload/v1531058456/s2s.png">
 </p>
 
 
