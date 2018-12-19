@@ -100,7 +100,7 @@ Content-Type: application/json
 ---
 
 ## 2. Present Widget 🎉
-> When you want to display the Klarna Payment methods to the consumer, initiate and load the widget
+> When you want to display the Klarna Payment methods to the consumer, initiate and load the widget.
 During this step, the Klarna widget is initialized, loaded and displays the available Klarna payment options to the user. You should render this on the checkout page along other payment methods offered.
 This should be done using the [JavaScript SDK](https://credit.klarnacdn.net/lib/v1/index.html)
 
