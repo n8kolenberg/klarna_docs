@@ -7,9 +7,9 @@
 
  ---
 
-?> Klarna Checkout consists of 2 parts:
+?> Klarna Checkout consists of 3 parts:
 
- ## Checkout Page Snippet - Create the order 🛒
+ ## 1. Checkout Page Snippet - Create the order 🛒
 ### Render the checkout page 👩‍💻
 - Call Klarna's server with your customer ```cart details```, ```locale```, ```merchant ID``` and a few more details.
 - Response is a HTML snippet - this needs to be embedded in your checkout page.
@@ -42,7 +42,7 @@ After the customer completed the purchase in checkout snippet:
 </p>
 
 
-## Embed the Checkout Snippet 👨‍💻
+## 2. Embed the Checkout Snippet 👨‍💻
 This part starts after the customer has selcted their product(s) on your site and wants to proceed to checkout.
 
 ?> Klarna uses HTTP Basic Auth for authentication. Use API credentials provided <br>
@@ -328,7 +328,7 @@ You will then get an updated Order Response. :raised_hands:
 
 ---
 
-## Show Purchase Confirmation - Purchase complete :100:
+## 3. Show Purchase Confirmation - Purchase complete :100:
 ?> Retrieving the checkout order and rendering the confirmation HTML snippet on your confirmation page <br>
 Once customer completed purchase, they will be redirected to confirmation page specified in ```merchant_urls.confirmation``` property when you created the order.
 
